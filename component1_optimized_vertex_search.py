@@ -47,11 +47,39 @@ locations = [
     (20.675185992803588, -103.35320105811411), (20.672957385547754, -103.35063738151716)
     ]
 
-
+# kd-tree search
+print('------------------------------------')
+print('KD-TREE SEARCH RESULTS')
+print('------------------------------------')
 for lat, lon in locations:
     x, y = project_point(lat, lon, G_proj)
     start_time = time.time()
     point, dist, id = kdtree.nearest_neighbor((x, y), return_distance=True)
     nearest_node = nodes[id]
     end_time = time.time()
-    print(f"Nearest node to ({lat},{lon}) is {nearest_node} with distance {dist}, search time: {1000 * (end_time - start_time):.6f} ms\n")
+    print(f"Nearest node to ({lat},{lon}) is {id} with distance {dist}, search time: {1000 * (end_time - start_time):.6f} ms\n")
+
+
+print('------------------------------------')
+print('BRUTE FORCE SEARCH RESULTS')
+print('------------------------------------')
+for lat, lon in locations:
+    x, y = project_point(lat, lon, G_proj)
+    
+    nearest_node = None
+    min_distance = float('inf')
+
+    start_time = time.time()
+    for id, data in G_proj.nodes(data=True):
+        node_x = data['x']
+        node_y = data['y']
+
+        distance = ((x - node_x) ** 2 + (y - node_y) ** 2) ** 0.5
+
+        if distance < min_distance:
+            min_distance = distance
+            nearest_node = id
+
+    end_time = time.time()
+
+    print(f"Nearest node to ({lat},{lon}) is {nearest_node} with distance {min_distance}, search time: {1000 * (end_time - start_time):.6f} ms\n")
