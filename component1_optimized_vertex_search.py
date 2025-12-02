@@ -1,6 +1,5 @@
 import osmnx as ox
-import pyproj
-import time
+import pyproj, time
 from kd_tree import KDTree
 
 # ox.settings.log_console = True
@@ -17,7 +16,7 @@ coordinates = 20.67407230013045, -103.35893745618219
 
 G = ox.graph_from_point(coordinates, dist=1000, network_type='drive')
 
-# get the coordinates
+# get the projection map
 G_proj = ox.project_graph(G)
 
 # extract nodes and coordinates
@@ -51,18 +50,23 @@ locations = [
 print('------------------------------------')
 print('KD-TREE SEARCH RESULTS')
 print('------------------------------------')
+kd_times = []
 for lat, lon in locations:
     x, y = project_point(lat, lon, G_proj)
+
     start_time = time.time()
     point, dist, id = kdtree.nearest_neighbor((x, y), return_distance=True)
     nearest_node = nodes[id]
     end_time = time.time()
+
+    kd_times.append(end_time - start_time)
     print(f"Nearest node to ({lat},{lon}) is {id} with distance {dist}, search time: {1000 * (end_time - start_time):.6f} ms\n")
 
 
 print('------------------------------------')
 print('BRUTE FORCE SEARCH RESULTS')
 print('------------------------------------')
+bf_times = []
 for lat, lon in locations:
     x, y = project_point(lat, lon, G_proj)
     
@@ -82,4 +86,9 @@ for lat, lon in locations:
 
     end_time = time.time()
 
+    bf_times.append(end_time - start_time)
+
     print(f"Nearest node to ({lat},{lon}) is {nearest_node} with distance {min_distance}, search time: {1000 * (end_time - start_time):.6f} ms\n")
+
+print(f"Mean time of KD search: {1000 * (sum(kd_times) / len(kd_times)):.6f} ms")
+print(f"Mean time of Brute force search: {1000 * (sum(bf_times) / len(bf_times)):.6f} ms")
