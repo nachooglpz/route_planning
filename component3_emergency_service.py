@@ -40,6 +40,12 @@ def project_point(lat, lon, G_proj):
     x, y = transformer.transform(lon, lat)
     return x, y
 
+# get the closest hospital
+def get_closest_hosp(tree, coords, G_proj):
+    x, y = project_point(coords[0], coords[1], G_proj)
+
+    return tree.nearest_neighbor(x, y)
+
 # americana neighbourhood coordinates (centered at the templo expiatorio)
 coordinates = 20.67407230013045, -103.35893745618219
 
@@ -67,4 +73,6 @@ hospitals = [(20.673211891402076, -103.35950088419128), (20.676163033971346, -10
 hosp_proj_points = [project_point(lat, lon, G_proj) for (lat, lon) in hospitals]
 
 # get the hospital nodes
-hosp_nodes = [node_id for (_, _, node_id) in  (kdtree.nearest_neighbor((x, y), return_distance=True) for (x, y) in hosp_proj_points)]
+# hosp_nodes = [node_id for (_, _, node_id) in  (kdtree.nearest_neighbor((x, y), return_distance=True) for (x, y) in hosp_proj_points)]
+
+hosp_kd = KDTree((x, y, i) for i, (x, y) in enumerate(hosp_proj_points))
