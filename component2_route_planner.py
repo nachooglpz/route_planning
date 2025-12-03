@@ -2,6 +2,7 @@ from simpleai.search import breadth_first, depth_first, uniform_cost, iterative_
 import osmnx as ox
 from kd_tree import KDTree
 import pyproj, time
+from func_timeout import func_timeout, FunctionTimedOut
 
 # Search problem definition
 class RoutePlanning(SearchProblem):
@@ -52,6 +53,8 @@ points = [(data['x'], data['y'], node_id) for node_id, data in nodes]
 
 kdtree = KDTree(points) # build the kd_tree
 
+TIMEOUT = 10
+
 print('------------------------------------')
 print('SHORT RANGE DISTANCES')
 print('------------------------------------')
@@ -59,69 +62,157 @@ print('------------------------------------')
 short_range_points = [(20.672415270083093, -103.35694735274907), (20.67451623525472, -103.3590330613026),
                       (20.673038501017935, -103.36236405280633), (20.67188488248092, -103.36308214722402),
                       (20.671211252700303, -103.35984558966872)
-                    ]
+]
 
 astar_times = []
 bfs_times = []
-# dfs_times = []
+dfs_times = []
 ucs_times = []
 iddfs_times = []
+
+x, y = project_point(coordinates[0], coordinates[1], G_proj)
+e_point, e_id = kdtree.nearest_neighbor((x, y))
+
 for i, (lat, lon) in enumerate(short_range_points):
-    # take initial vertex
+
     x, y = project_point(lat, lon, G_proj)
     i_point, i_id = kdtree.nearest_neighbor((x, y))
 
-    # take final vertex
-    x, y = project_point(coordinates[0], coordinates[1], G_proj)
-    e_point, e_id = kdtree.nearest_neighbor((x, y))
+    rp = RoutePlanning(i_id, e_id, G_proj)
 
-    # measure times
-    
-    # bfs time
-    # print('trying bfs')
+    # BFS
     start_time = time.time()
-    bfs_solution = breadth_first(RoutePlanning(i_id, e_id, G_proj))
-    end_time = time.time()
-    bfs_times.append(end_time - start_time)
-    #print('bfs finished')
+    try:
+        bfs_solution = func_timeout(TIMEOUT, breadth_first, args=(rp,))
+    except FunctionTimedOut:
+        bfs_solution = None
+    bfs_times.append(time.time() - start_time)
 
-    # print('trying dfs')
-    # # dfs time
-    # start_time = time.time()
-    # dfs_solution = depth_first(RoutePlanning(i_id, e_id, G_proj))
-    # end_time = time.time()
-    # dfs_times.append(end_time - start_time)
-    # print('dfs finished')
-
-    # ucs time
-    # print('trying ucs')
+    # DFS
     start_time = time.time()
-    ucs_solution = uniform_cost(RoutePlanning(i_id, e_id, G_proj))
-    end_time = time.time()
-    ucs_times.append(end_time - start_time)
-    # print('ucs finished')
+    try:
+        dfs_solution = func_timeout(TIMEOUT, depth_first, args=(rp,))
+    except FunctionTimedOut:
+        bfs_solution = None
+    dfs_times.append(time.time() - start_time)
 
-    # iddfs time
-    # print('trying iddfs')
+    # UCS
     start_time = time.time()
-    iddfs_solution = iterative_limited_depth_first(RoutePlanning(i_id, e_id, G_proj))
-    end_time = time.time()
-    iddfs_times.append(end_time - start_time)
-    # print('iddfs finished')
+    try:
+        ucs_solution = func_timeout(TIMEOUT, uniform_cost, args=(rp,))
+    except FunctionTimedOut:
+        ucs_solution = None
+    ucs_times.append(time.time() - start_time)
 
-    # astar time
-    # print('trying astart')
+    # IDDFS
     start_time = time.time()
-    astar_solution = astar(RoutePlanning(i_id, e_id, G_proj))
-    end_time = time.time()
-    astar_times.append(end_time - start_time)
-    # print('astar finished')
+    try:
+        iddfs_solution = func_timeout(TIMEOUT, iterative_limited_depth_first, args=(rp,))
+    except FunctionTimedOut:
+        iddfs_solution = None
+    iddfs_times.append(time.time() - start_time)
 
-    # print(f"bfs time: {bfs_times[i]:.6f}, dfs time: {dfs_times[i]:.6f}, ucs time: {ucs_times[i]:.6f}, iddfs time: {iddfs_times[i]:.6f}, astar time: {astar_times[i]:.6f}.")
-    print(f"bfs time: {1000 * bfs_times[i]:.6f} ms, ucs time: {1000 * ucs_times[i]:.6f} ms, iddfs time: {1000 * iddfs_times[i]:.6f} ms, astar time: {1000 * astar_times[i]:.6f} ms.")
+    # ASTAR
+    start_time = time.time()
+    try:
+        astar_solution = func_timeout(TIMEOUT, astar, args=(rp,))
+    except FunctionTimedOut:
+        astar_solution = None
+    astar_times.append(time.time() - start_time)
 
-print(f"bfs average time: {1000 * (sum(bfs_times) / len(bfs_times)):.6f} ms")
-# print(f"dfs average time: {(sum(dfs_times) / len(dfs_times)):.6f} s")
-print(f"ucs average time: {1000 * (sum(ucs_times) / len(ucs_times)):.6f} ms")
-print(f"iddfs average time: {1000 * (sum(iddfs_times) / len(iddfs_times)):.6f} ms")
-print(f"astar average time: {1000 * (sum(astar_times) / len(astar_times)):.6f} ms")
+    print(
+        f"bfs: {1000 * bfs_times[i]:.3f} ms, "
+        f"dfs: {1000 * dfs_times[i]:.3f} ms, "
+        f"ucs: {1000 * ucs_times[i]:.3f} ms, "
+        f"iddfs: {1000 * iddfs_times[i]:.3f} ms, "
+        f"astar: {1000 * astar_times[i]:.3f} ms"
+    )
+
+print(f"bfs avg:   {1000 * (sum(bfs_times) / len(bfs_times)):.3f} ms")
+print(f"dfs avg:   {1000 * (sum(dfs_times) / len(dfs_times)):.3f} ms")
+print(f"ucs avg:   {1000 * (sum(ucs_times) / len(ucs_times)):.3f} ms")
+print(f"iddfs avg: {1000 * (sum(iddfs_times) / len(iddfs_times)):.3f} ms")
+print(f"astar avg: {1000 * (sum(astar_times) / len(astar_times)):.3f} ms")
+
+print('------------------------------------')
+print('MID RANGE DISTANCES')
+print('------------------------------------')
+
+mid_range_points = [(20.68003419605609, -103.34978764582817), (20.65861100742661, -103.35914622492686),
+                      (20.670817895239068, -103.37691317671931), (20.660220704521567, -103.36591689816883),
+                      (20.67170125043079, -103.34258090216602)
+]
+
+astar_times = []
+bfs_times = []
+dfs_times = []
+ucs_times = []
+iddfs_times = []
+
+x, y = project_point(coordinates[0], coordinates[1], G_proj)
+e_point, e_id = kdtree.nearest_neighbor((x, y))
+
+for i, (lat, lon) in enumerate(mid_range_points):
+
+    x, y = project_point(lat, lon, G_proj)
+    i_point, i_id = kdtree.nearest_neighbor((x, y))
+
+    rp = RoutePlanning(i_id, e_id, G_proj)
+
+    # BFS
+    start_time = time.time()
+    try:
+        bfs_solution = func_timeout(TIMEOUT, breadth_first, args=(rp,))
+    except FunctionTimedOut:
+        bfs_solution = None
+    bfs_times.append(time.time() - start_time)
+
+    # DFS
+    start_time = time.time()
+    try:
+        dfs_solution = func_timeout(TIMEOUT, depth_first, args=(rp,))
+    except FunctionTimedOut:
+        dfs_solution = None
+    dfs_times.append(time.time() - start_time)
+
+    # UCS
+    start_time = time.time()
+    try:
+        ucs_solution = func_timeout(TIMEOUT, uniform_cost, args=(rp,))
+    except FunctionTimedOut:
+        ucs_solution = None
+    ucs_times.append(time.time() - start_time)
+
+    # IDDFS
+    start_time = time.time()
+    try:
+        iddfs_solution = func_timeout(TIMEOUT, iterative_limited_depth_first, args=(rp,))
+    except FunctionTimedOut:
+        iddfs_solution = None
+    iddfs_times.append(time.time() - start_time)
+
+    # ASTAR
+    start_time = time.time()
+    try:
+        astar_solution = func_timeout(TIMEOUT, astar, args=(rp,))
+    except FunctionTimedOut:
+        astar_solution = None
+    astar_times.append(time.time() - start_time)
+
+    # print the output for this node nicely
+    parts = [
+    f"bfs: {bfs_times[i]:.6f} s" if bfs_solution else "",
+    f"dfs: {dfs_times[i]:.6f} s" if dfs_solution else "",
+    f"ucs: {ucs_times[i]:.6f} s" if ucs_solution else "",
+    f"iddfs: {iddfs_times[i]:.6f} s" if iddfs_solution else "",
+    f"astar: {astar_times[i]:.6f} s" if astar_solution else "",
+    ]
+    output = ", ".join(filter(None, parts))
+    print(output)
+
+
+print(f"bfs avg:   {(sum(bfs_times) / len(bfs_times)):.6f} s")
+print(f"dfs avg:   {(sum(dfs_times) / len(dfs_times)):.6f} s")
+print(f"ucs avg:   {(sum(ucs_times) / len(ucs_times)):.6f} s")
+print(f"iddfs avg: {(sum(iddfs_times) / len(iddfs_times)):.6f} s")
+print(f"astar avg: {(sum(astar_times) / len(astar_times)):.6f} s")
