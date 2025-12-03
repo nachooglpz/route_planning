@@ -62,3 +62,9 @@ hospitals = [(20.673211891402076, -103.35950088419128), (20.676163033971346, -10
              (20.66313340746032, -103.36291265412089), (20.68574522688616, -103.36847274639096), 
              (20.678317540315987, -103.37769954502716), (20.67813686233053, -103.3778497487259),
              (20.68726227514667, -103.33390048641502), (20.672085468860526, -103.32508138308421)]
+
+# projection points for hospital coords
+hosp_proj_points = [project_point(lat, lon, G_proj) for (lat, lon) in hospitals]
+
+# get the hospital nodes
+hosp_nodes = [node_id for (_, _, node_id) in  (kdtree.nearest_neighbor((x, y), return_distance=True) for (x, y) in hosp_proj_points)]
