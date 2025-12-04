@@ -73,6 +73,30 @@ hospitals = [(20.673211891402076, -103.35950088419128), (20.676163033971346, -10
 hosp_proj_points = [project_point(lat, lon, G_proj) for (lat, lon) in hospitals]
 
 # get the hospital nodes
-# hosp_nodes = [node_id for (_, _, node_id) in  (kdtree.nearest_neighbor((x, y), return_distance=True) for (x, y) in hosp_proj_points)]
+hosp_nodes = [node_id for (_, _, node_id) in  (kdtree.nearest_neighbor((x, y), return_distance=True) for (x, y) in hosp_proj_points)]
 
-hosp_kd = KDTree((x, y, i) for i, (x, y) in enumerate(hosp_proj_points))
+hosp_kd = KDTree([(x, y, i) for i, (x, y) in enumerate(hosp_proj_points)])
+
+# assign each node its closest hospital
+node_to_hospital = {}
+for node_id, data in G_proj.nodes(data=True):
+    x, y = data['x'], data['y']
+    (_, hosp_idx) = hosp_kd.nearest_neighbor((x, y))
+    node_to_hospital[node_id] = hosp_idx
+
+# some random points that i selected on maps to test getting the nearest hospital
+rand_points = [(20.672459116830847, -103.35685651020869), (20.671063821847405, -103.36298267544693),
+               (20.668032273434655, -103.3669630735779), (20.67362931100878, -103.35180607317065),
+               (20.66939283815133, -103.3507874753673), (20.678193252711818, -103.35206868064547),
+               (20.67870696676613, -103.3616657833699), (20.67717326468566, -103.36527066524614)]
+
+# get the route to the nearest hospital
+for (xp, yp) in rand_points:
+    # project the coords
+    p = project_point(xp, yp, G_proj)
+    _, i_id = kdtree.nearest_neighbor(p)
+    res = astar(RoutePlanning(i_id, hosp_nodes[node_to_hospital[i_id]], G_proj))
+
+    print(f"ROUTE FOR COORDS: {xp}, {yp}:")
+    for (_, state) in res.path():
+        print(state)
