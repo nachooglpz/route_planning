@@ -1,7 +1,6 @@
 from simpleai.search import astar, SearchProblem
 import osmnx as ox
 import matplotlib.pyplot as plt
-import networkx as nx
 from kd_tree import KDTree
 import pyproj
 
@@ -86,40 +85,36 @@ for node_id, data in G_proj.nodes(data=True):
     (_, hosp_idx) = hosp_kd.nearest_neighbor((x, y))
     node_to_hospital[node_id] = hosp_idx
 
-# some random points that i selected on maps to test getting the nearest hospital
-rand_points = [(20.672459116830847, -103.35685651020869), (20.671063821847405, -103.36298267544693),
-               (20.668032273434655, -103.3669630735779), (20.67362931100878, -103.35180607317065),
-               (20.66939283815133, -103.3507874753673), (20.678193252711818, -103.35206868064547),
-               (20.67870696676613, -103.3616657833699), (20.67717326468566, -103.36527066524614)]
+# get user input coordinates
+usr_coords = input('Input location coordinates: ')
+xp, yp = tuple(float(x) for x in usr_coords.split(", "))
 
-# get the route to the nearest hospital
-for (xp, yp) in rand_points:
-    # project the coords
-    p = project_point(xp, yp, G_proj)
-    _, i_id = kdtree.nearest_neighbor(p)
-    nearest_hosp = hosp_nodes[node_to_hospital[i_id]]
-    res = astar(RoutePlanning(i_id, nearest_hosp, G_proj))
+# project the coords
+p = project_point(xp, yp, G_proj)
+_, i_id = kdtree.nearest_neighbor(p)
+nearest_hosp = hosp_nodes[node_to_hospital[i_id]]
+res = astar(RoutePlanning(i_id, nearest_hosp, G_proj))
 
-    print(f"ROUTE FOR COORDS: {xp}, {yp}:")
+# print(f"ROUTE FOR COORDS: {xp}, {yp}:")
 
-    path_nodes = [state for (_, state) in res.path()]
-    # for node in path_nodes:
-    #     print(node)
+path_nodes = [state for (_, state) in res.path()]
+# for node in path_nodes:
+#     print(node)
 
-    # get the coords of the nodes
-    path_coords = [(G_proj.nodes[node]['x'], G_proj.nodes[node]['y']) for node in path_nodes]
+# get the coords of the nodes
+path_coords = [(G_proj.nodes[node]['x'], G_proj.nodes[node]['y']) for node in path_nodes]
 
-    # plot the graph
-    fig, ax = ox.plot_graph(G_proj, show=False, close=False, node_size=10, edge_color='lightgray')
-    
-    # plot the path
-    xs, ys = zip(*path_coords)
-    ax.plot(xs, ys, color='red', linewidth=2, label='Route')
-    
-    # mark start and hospital
-    ax.scatter(G_proj.nodes[i_id]['x'], G_proj.nodes[i_id]['y'], c='blue', s=50, label='Start')
-    ax.scatter(G_proj.nodes[nearest_hosp]['x'], G_proj.nodes[nearest_hosp]['y'],
-               c='green', s=50, label='Hospital')
-    
-    ax.legend()
-    plt.show()
+# plot the graph
+fig, ax = ox.plot_graph(G_proj, show=False, close=False, node_size=10, edge_color='lightgray')
+
+# plot the path
+xs, ys = zip(*path_coords)
+ax.plot(xs, ys, color='red', linewidth=2, label='Route')
+
+# mark start and hospital
+ax.scatter(G_proj.nodes[i_id]['x'], G_proj.nodes[i_id]['y'], c='blue', s=50, label='Start')
+ax.scatter(G_proj.nodes[nearest_hosp]['x'], G_proj.nodes[nearest_hosp]['y'],
+            c='green', s=50, label='Hospital')
+
+ax.legend()
+plt.show()
