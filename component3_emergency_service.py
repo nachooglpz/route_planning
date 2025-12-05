@@ -92,8 +92,16 @@ xp, yp = tuple(float(x) for x in usr_coords.split(", "))
 # project the coords
 p = project_point(xp, yp, G_proj)
 _, i_id = kdtree.nearest_neighbor(p)
-nearest_hosp = hosp_nodes[node_to_hospital[i_id]]
+hosp_idx = node_to_hospital[i_id]
+nearest_hosp = hosp_nodes[hosp_idx]
 res = astar(RoutePlanning(i_id, nearest_hosp, G_proj))
+
+# get all the nodes that belong to that hospital region
+region_nodes = [node for node, idx in node_to_hospital.items() if idx == hosp_idx]
+
+# get the coords of the nodes belonging to the hospital region
+region_coords = [(G_proj.nodes[node]['x'], G_proj.nodes[node]['y']) for node in region_nodes]
+rx, ry = zip(*region_coords)
 
 # print(f"ROUTE FOR COORDS: {xp}, {yp}:")
 
@@ -106,6 +114,9 @@ path_coords = [(G_proj.nodes[node]['x'], G_proj.nodes[node]['y']) for node in pa
 
 # plot the graph
 fig, ax = ox.plot_graph(G_proj, show=False, close=False, node_size=10, edge_color='lightgray')
+
+# plot the voronoi region for the hospital
+ax.scatter(rx, ry, c='yellow', alpha=0.5, s=20, label='Hospital Region')
 
 # plot the path
 xs, ys = zip(*path_coords)
